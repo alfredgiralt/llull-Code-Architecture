@@ -70,7 +70,7 @@
   .hero p { margin: 0; color: var(--ink-dim); max-width: 980px; }
 
   .hero-meta {
-    display: grid; grid-template-columns: repeat(4, minmax(0,1fr));
+    display: grid; grid-template-columns: repeat(5, minmax(0,1fr));
     gap: 12px; margin-top: 20px;
   }
   .metric {
@@ -333,6 +333,10 @@
         <div class="value good">≥ 3.4 / 5</div>
       </div>
       <div class="metric">
+        <div class="label">Dark code share (now)</div>
+        <div class="value bad">~4.5 % – ~17 %</div>
+      </div>
+         <div class="metric">
         <div class="label">Core principle</div>
         <div class="value">Discipline as build artifact</div>
       </div>
@@ -764,7 +768,88 @@
   </section>
 
   <!-- KPIs / SUMMARY -->
+    <section class="layer" style="border-left: 3px solid var(--bad); margin-top: 14px;">
+    <div class="layer-head">
+      <div class="layer-index" style="background: linear-gradient(135deg, var(--bad), #c64a4a); color:#fff;">%</div>
+      <h2>Dark Code Share — quantified</h2>
+      <span class="tag">Headline metric · ratchet down only</span>
+    </div>
+    <p style="margin:0 0 14px;color:var(--ink-dim);font-size:13px;">
+      Dark code is a qualitative category turned into a defensible number against countable, file-and-line-anchored proxies.
+      Conservative share counts only code that is literally unreached or silently disabled in production. Broad share adds production code with no honest test signal.
+    </p>
+
+    <div class="cp-grid">
+      <div class="cp-tile" style="background: linear-gradient(135deg, rgba(248,113,113,0.14), rgba(255,125,155,0.06)); border-color: rgba(248,113,113,0.3);">
+        <h4>Conservative share</h4>
+        <p>LOC literally unreached or silently disabled in production, divided by production LOC.</p>
+        <div style="display:flex; align-items:baseline; gap:10px; margin-top:10px;">
+          <div style="font-size:30px; font-weight:700; background: linear-gradient(90deg, var(--bad), var(--accent-4)); -webkit-background-clip: text; background-clip: text; color: transparent;">~4.5 %</div>
+          <div style="font-size:12px; color: var(--ink-dim);">~3,400 / ~75,000 LOC</div>
+        </div>
+        <div class="spec">zombie planner 3,239 · disabled VariantSelector ~120 · pytest-aware production ~50</div>
+      </div>
+
+      <div class="cp-tile" style="background: linear-gradient(135deg, rgba(246,169,106,0.14), rgba(255,125,155,0.06)); border-color: rgba(246,169,106,0.3);">
+        <h4>Broad share</h4>
+        <p>Adds production code with no honest test signal, plus tests propping up dead code, plus smaller anti-patterns.</p>
+        <div style="display:flex; align-items:baseline; gap:10px; margin-top:10px;">
+          <div style="font-size:30px; font-weight:700; background: linear-gradient(90deg, var(--accent-4), var(--accent-5)); -webkit-background-clip: text; background-clip: text; color: transparent;">~17 %</div>
+          <div style="font-size:12px; color: var(--ink-dim);">~16,200 / ~97,000 LOC</div>
+        </div>
+        <div class="spec">+ coverage-omitted production 9,200 · + zombie tests 3,500 · + mock-path / conftest 110</div>
+      </div>
+
+      <div class="cp-tile" style="background: linear-gradient(135deg, rgba(74,222,128,0.10), rgba(79,209,197,0.06)); border-color: rgba(74,222,128,0.3);">
+        <h4>Target (6 months)</h4>
+        <p>Conservative share is the metric to track quarter-over-quarter. CI fails on regression.</p>
+        <div style="display:flex; align-items:baseline; gap:10px; margin-top:10px;">
+          <div style="font-size:30px; font-weight:700; background: linear-gradient(90deg, var(--ok), var(--accent-3)); -webkit-background-clip: text; background-clip: text; color: transparent;">≤ 1.5 %</div>
+          <div style="font-size:12px; color: var(--ink-dim);">conservative share</div>
+        </div>
+        <div class="spec">scripts/check_dark_code_share.py · governance/metrics/dark_code_share.csv</div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;">
+      <div style="font-size:12px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom:6px;">
+        Dark code composition (broad share, 16,200 LOC)
+      </div>
+      <div style="display:flex; height: 22px; border-radius: 999px; overflow: hidden; border: 1px solid var(--border-strong);">
+        <div title="Coverage-omitted production: 9,200 LOC" style="flex: 9200; background: linear-gradient(90deg, #f87171, #fb923c); display:grid; place-items:center; font-size:11px; color:#1a0a0a; font-weight:600;">9,200</div>
+        <div title="Tests of zombie code: 3,500 LOC" style="flex: 3500; background: linear-gradient(90deg, #fb923c, #fbbf24); display:grid; place-items:center; font-size:11px; color:#1a1305; font-weight:600;">3,500</div>
+        <div title="Zombie planner code: 3,239 LOC" style="flex: 3239; background: linear-gradient(90deg, #fbbf24, #facc15); display:grid; place-items:center; font-size:11px; color:#1a1305; font-weight:600;">3,239</div>
+        <div title="Disabled VariantSelector + pytest-aware production: 170 LOC" style="flex: 170; background: linear-gradient(90deg, #facc15, #a3e635); display:grid; place-items:center; font-size:11px; color:#0a1a05; font-weight:600;">170</div>
+        <div title="Mock-path / conftest mutations: 110 LOC" style="flex: 110; background: linear-gradient(90deg, #a3e635, #4ade80); display:grid; place-items:center; font-size:11px; color:#0a1a05; font-weight:600;">110</div>
+      </div>
+      <div style="display:flex; flex-wrap:wrap; gap:14px; margin-top:10px; font-size:11.5px; color: var(--ink-dim);">
+        <span style="display:inline-flex; align-items:center; gap:6px;"><span style="width:10px; height:10px; border-radius:2px; background:#f87171;"></span>Coverage-omitted production</span>
+        <span style="display:inline-flex; align-items:center; gap:6px;"><span style="width:10px; height:10px; border-radius:2px; background:#fb923c;"></span>Tests of zombie code</span>
+        <span style="display:inline-flex; align-items:center; gap:6px;"><span style="width:10px; height:10px; border-radius:2px; background:#fbbf24;"></span>Zombie planner</span>
+        <span style="display:inline-flex; align-items:center; gap:6px;"><span style="width:10px; height:10px; border-radius:2px; background:#facc15;"></span>Disabled stage + pytest-aware prod</span>
+        <span style="display:inline-flex; align-items:center; gap:6px;"><span style="width:10px; height:10px; border-radius:2px; background:#a3e635;"></span>Mock-path / conftest</span>
+      </div>
+    </div>
+
+    <details>
+      <summary>Caveats &amp; what the figure does not count</summary>
+      <ul>
+        <li>Excludes the 4,800-LOC vendored <code>tools/anomalyIdentifier/outlierdetection/</code> package — a governance dark zone, but not dark code per se.</li>
+        <li>Excludes 443 broad <code>except Exception:</code> clauses across the source tree — a reservoir of potential dark code, not confirmed dark code.</li>
+        <li>The 1,052-LOC <code>Orchestrator</code> god-class is <em>not</em> counted as dark — only the ~120 lines of its silently-disabled VariantSelector stage.</li>
+        <li>The 909-LOC <code>LlullDB</code> and 1,353-LOC <code>Text2SQLAgent</code> are not counted as dark — they are uneven and coupled, but their behaviour is exercised by traffic.</li>
+        <li>Documentation drift (deleted modules still cited in <code>readme.md</code> / <code>BACKEND_PYTHON_API_GUIDELINES.md</code>) is not counted in LOC because it is not Python.</li>
+        <li>Lead with the conservative share (~4.5 %) externally; show the broad share (~17 %) as the upper bound.</li>
+      </ul>
+    </details>
+  </section>
+  
   <section class="summary-grid" aria-label="Acceptance summary">
+        <div class="summary-card warn">
+      <div class="kpi">~4.5 % → ≤ 1.5 %</div>
+      <h3>Dark code share</h3>
+      <p>Conservative share (production LOC unreached or silently disabled) measured weekly via <code>scripts/check_dark_code_share.py</code>; ratchets down only. Broad share (~17 %) is the upper bound including coverage-omitted production and tests propping up dead code.</p>
+    </div>
     <div class="summary-card good">
       <div class="kpi">0 / RCE</div>
       <h3>No deserialization on public surface</h3>
