@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LlullGen — Target Codebase Governance Architecture</title>
+<style>
+  :root {
+    --bg: #0b1020;
+    --bg-soft: #111933;
+    --panel: #151d3a;
+    --panel-2: #1b2547;
+    --ink: #e8ecff;
+    --ink-dim: #aab3d6;
+    --accent: #7c9cff;
+    --accent-2: #a885ff;
+    --accent-3: #4fd1c5;
+    --accent-4: #f6a96a;
+    --accent-5: #ff7d9b;
+    --ok: #4ade80;
+    --warn: #fbbf24;
+    --bad: #f87171;
+    --border: rgba(255,255,255,0.08);
+    --border-strong: rgba(255,255,255,0.16);
+    --shadow: 0 10px 30px rgba(0,0,0,0.35);
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: radial-gradient(1200px 800px at 10% -10%, #1a2352 0%, transparent 60%),
+                radial-gradient(1000px 700px at 110% 10%, #2a1f5a 0%, transparent 55%),
+                var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    min-height: 100%;
+  }
+
+  .page { max-width: 1400px; margin: 0 auto; padding: 32px 24px 80px; }
+
+  header.hero {
+    background: linear-gradient(135deg, rgba(124,156,255,0.18), rgba(168,133,255,0.12) 40%, rgba(79,209,197,0.10));
+    border: 1px solid var(--border-strong);
+    border-radius: 20px;
+    padding: 28px 32px;
+    box-shadow: var(--shadow);
+    margin-bottom: 28px;
+    position: relative; overflow: hidden;
+  }
+  header.hero::after{
+    content:""; position:absolute; inset:-1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+    mix-blend-mode: overlay; pointer-events:none;
+  }
+  .hero-kicker {
+    display: inline-block;
+    text-transform: uppercase; letter-spacing: 0.16em;
+    font-size: 11px; color: var(--accent-3);
+    background: rgba(79,209,197,0.08);
+    border: 1px solid rgba(79,209,197,0.25);
+    padding: 5px 10px; border-radius: 999px;
+    margin-bottom: 14px;
+  }
+  .hero h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: -0.01em; }
+  .hero h1 span.grad {
+    background: linear-gradient(90deg, var(--accent), var(--accent-2) 55%, var(--accent-3));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero p { margin: 0; color: var(--ink-dim); max-width: 980px; }
+
+  .hero-meta {
+    display: grid; grid-template-columns: repeat(4, minmax(0,1fr));
+    gap: 12px; margin-top: 20px;
+  }
+  .metric {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 14px; padding: 12px 14px;
+  }
+  .metric .label { font-size: 11px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: 0.12em; }
+  .metric .value { font-size: 18px; font-weight: 600; margin-top: 4px; }
+  .metric .value.good { color: var(--ok); }
+  .metric .value.warn { color: var(--warn); }
+  .metric .value.bad { color: var(--bad); }
+
+  /* Legend */
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 10px;
+    margin: 18px 0 24px;
+  }
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 6px 12px; border-radius: 999px; font-size: 12px; color: var(--ink-dim);
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot.l1 { background: var(--accent); }
+  .dot.l2 { background: var(--accent-2); }
+  .dot.l3 { background: var(--accent-3); }
+  .dot.l4 { background: var(--accent-4); }
+  .dot.l5 { background: var(--accent-5); }
+  .dot.l6 { background: var(--ink); }
+
+  /* Flow arrow between layers */
+  .flow-arrow {
+    display: flex; flex-direction: column; align-items: center;
+    margin: -6px 0 -6px;
+    color: var(--ink-dim);
+    font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .flow-arrow .line {
+    width: 2px; height: 22px;
+    background: linear-gradient(180deg, var(--border-strong), transparent);
+  }
+  .flow-arrow .badge {
+    margin: 6px 0;
+    background: var(--panel-2);
+    border: 1px solid var(--border-strong);
+    padding: 4px 10px; border-radius: 999px;
+    color: var(--ink);
+  }
+  .flow-arrow .line.down {
+    background: linear-gradient(180deg, transparent, var(--border-strong));
+  }
+  .flow-arrow .caret {
+    width: 0; height: 0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 10px solid var(--border-strong);
+    margin-top: 2px;
+  }
+
+  /* Layer card */
+  .layer {
+    background: linear-gradient(180deg, var(--panel), var(--panel-2));
+    border: 1px solid var(--border-strong);
+    border-radius: 18px;
+    padding: 20px 22px;
+    box-shadow: var(--shadow);
+    position: relative;
+  }
+  .layer + .layer { margin-top: 10px; }
+  .layer-head {
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 14px;
+  }
+  .layer-index {
+    width: 44px; height: 44px; border-radius: 12px;
+    display: grid; place-items: center;
+    font-weight: 700; font-size: 18px;
+    color: #0b1020;
+    flex-shrink: 0;
+  }
+  .layer-head h2 { margin: 0; font-size: 20px; letter-spacing: -0.01em; }
+  .layer-head .tag {
+    margin-left: auto;
+    font-size: 11px; color: var(--ink-dim);
+    text-transform: uppercase; letter-spacing: 0.12em;
+  }
+
+  .l1 .layer-index { background: linear-gradient(135deg, var(--accent), #5b7cff); }
+  .l2 .layer-index { background: linear-gradient(135deg, var(--accent-2), #7a55e0); }
+  .l3 .layer-index { background: linear-gradient(135deg, var(--accent-3), #30a89c); }
+  .l4 .layer-index { background: linear-gradient(135deg, var(--accent-4), #d97f3c); }
+  .l5 .layer-index { background: linear-gradient(135deg, var(--accent-5), #d85472); }
+  .l6 .layer-index { background: linear-gradient(135deg, #e4e8ff, #aab3d6); }
+
+  .l1 { border-left: 3px solid var(--accent); }
+  .l2 { border-left: 3px solid var(--accent-2); }
+  .l3 { border-left: 3px solid var(--accent-3); }
+  .l4 { border-left: 3px solid var(--accent-4); }
+  .l5 { border-left: 3px solid var(--accent-5); }
+  .l6 { border-left: 3px solid var(--ink); }
+
+  /* Tiles inside layers */
+  .tiles {
+    display: grid; gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+  .tile {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 14px; padding: 12px 14px;
+    transition: transform .18s ease, border-color .18s ease, background .18s ease;
+    min-height: 88px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .tile:hover {
+    transform: translateY(-2px);
+    border-color: var(--border-strong);
+    background: rgba(255,255,255,0.05);
+  }
+  .tile .t-title { font-weight: 600; font-size: 14px; }
+  .tile .t-desc { font-size: 12.5px; color: var(--ink-dim); }
+  .tile .t-tag {
+    margin-top: 4px;
+    display: inline-block; font-size: 10.5px;
+    color: var(--ink);
+    background: rgba(124,156,255,0.15);
+    border: 1px solid rgba(124,156,255,0.3);
+    padding: 2px 8px; border-radius: 999px;
+    width: fit-content;
+  }
+  .tile.deterministic .t-tag { background: rgba(74,222,128,0.14); border-color: rgba(74,222,128,0.3); }
+  .tile.registry .t-tag { background: rgba(79,209,197,0.14); border-color: rgba(79,209,197,0.32); }
+  .tile.llm .t-tag { background: rgba(246,169,106,0.16); border-color: rgba(246,169,106,0.3); }
+  .tile.governance .t-tag { background: rgba(168,133,255,0.16); border-color: rgba(168,133,255,0.32); }
+  .tile.enforcement .t-tag { background: rgba(255,125,155,0.16); border-color: rgba(255,125,155,0.32); }
+
+  /* Control plane special panel */
+  .cp-grid {
+    display: grid; gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+  .cp-tile {
+    background: linear-gradient(135deg, rgba(168,133,255,0.10), rgba(124,156,255,0.06));
+    border: 1px solid rgba(168,133,255,0.25);
+    border-radius: 14px; padding: 14px;
+  }
+  .cp-tile h4 { margin: 0 0 4px; font-size: 14px; }
+  .cp-tile p { margin: 0; font-size: 12.5px; color: var(--ink-dim); }
+  .cp-tile .spec {
+    margin-top: 8px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11.5px; color: #cfd8ff;
+    background: rgba(0,0,0,0.25);
+    border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 8px;
+    overflow-x: auto; white-space: nowrap;
+  }
+
+  /* Cross-cutting panel */
+  .cross {
+    display: grid; gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+
+  /* Footer summary */
+  .summary-grid {
+    display: grid; gap: 14px; margin-top: 28px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+  .summary-card {
+    background: linear-gradient(180deg, var(--panel), var(--panel-2));
+    border: 1px solid var(--border-strong);
+    border-radius: 16px; padding: 18px;
+    box-shadow: var(--shadow);
+  }
+  .summary-card h3 { margin: 0 0 8px; font-size: 15px; }
+  .summary-card p { margin: 0; font-size: 13px; color: var(--ink-dim); }
+  .summary-card .kpi {
+    font-size: 26px; font-weight: 700;
+    background: linear-gradient(90deg, var(--accent), var(--accent-3));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    margin-bottom: 2px;
+  }
+  .summary-card.warn .kpi { background: linear-gradient(90deg, var(--accent-4), var(--accent-5)); -webkit-background-clip: text; background-clip: text; color: transparent;}
+  .summary-card.good .kpi { background: linear-gradient(90deg, var(--ok), var(--accent-3)); -webkit-background-clip: text; background-clip: text; color: transparent;}
+
+  /* Score meter */
+  .meter { margin-top: 14px; }
+  .meter .bar { height: 8px; width: 100%; background: rgba(255,255,255,0.08); border-radius: 999px; overflow: hidden; border: 1px solid var(--border); }
+  .meter .fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--bad), var(--warn) 45%, var(--ok));
+    border-radius: 999px;
+  }
+  .meter .ticks {
+    display: flex; justify-content: space-between;
+    font-size: 11px; color: var(--ink-dim); margin-top: 6px;
+  }
+  .cur-marker {
+    position: relative; height: 0;
+  }
+  .cur-marker span {
+    position: absolute; top: -22px; transform: translateX(-50%);
+    font-size: 11px; color: var(--ink);
+    background: var(--panel-2); border: 1px solid var(--border-strong);
+    padding: 2px 8px; border-radius: 999px; white-space: nowrap;
+  }
+
+  footer {
+    margin-top: 30px;
+    color: var(--ink-dim); font-size: 12px; text-align: center;
+  }
+  footer code { color: var(--ink); }
+
+  /* Collapsible details */
+  details {
+    margin-top: 14px;
+    background: rgba(0,0,0,0.18);
+    border: 1px dashed var(--border-strong);
+    border-radius: 12px; padding: 10px 14px;
+  }
+  details[open] summary { color: var(--ink); }
+  summary {
+    cursor: pointer; font-size: 13px; color: var(--ink-dim);
+    outline: none; user-select: none;
+  }
+  details ul { margin: 10px 0 4px 18px; padding: 0; font-size: 12.5px; color: var(--ink); }
+  details ul li { margin-bottom: 4px; }
+
+  @media (max-width: 720px) {
+    .hero h1 { font-size: 22px; }
+    .hero-meta { grid-template-columns: repeat(2, 1fr); }
+    .layer-head h2 { font-size: 17px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HERO -->
+  <header class="hero">
+    <span class="hero-kicker">Target Architecture · Production-Grade Governable Codebase</span>
+    <h1>
+      LlullGen <span class="grad">Codebase Governance &amp; Dark-Code Resistance</span>
+    </h1>
+    <p>
+      A six-layer architecture that moves discipline from <em>prose-in-docs</em> to <em>build-artifact enforcement</em>.
+      Boundaries are linted both ways. Coverage measures the codebase. Tests cannot mock paths that don't exist. Production code cannot branch on the test framework. Dead code is dated and deleted. The result is the same shape as today's repo — with the silence removed.
+    </p>
+
+    <div class="hero-meta">
+      <div class="metric">
+        <div class="label">Current state score</div>
+        <div class="value bad">~2.05 / 5</div>
+      </div>
+      <div class="metric">
+        <div class="label">Target state score</div>
+        <div class="value good">≥ 3.4 / 5</div>
+      </div>
+      <div class="metric">
+        <div class="label">Core principle</div>
+        <div class="value">Discipline as build artifact</div>
+      </div>
+      <div class="metric">
+        <div class="label">Migration</div>
+        <div class="value warn">~9–10 weeks · ratchet, never loosen</div>
+      </div>
+    </div>
+
+    <div class="meter" aria-label="Maturity meter">
+      <div class="bar"><div class="fill" style="width:41%"></div></div>
+      <div class="cur-marker"><span style="left:41%">Now · 2.05</span><span style="left:68%">Target · 3.4</span></div>
+      <div class="ticks">
+        <span>0 · Absent</span>
+        <span>1 · Ad hoc</span>
+        <span>2 · Fragmented</span>
+        <span>3 · Functional</span>
+        <span>4 · Strong</span>
+        <span>5 · Mature</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- LEGEND -->
+  <div class="legend" role="list">
+    <span class="chip" role="listitem"><span class="dot l1"></span>L1 Ingress &amp; Security</span>
+    <span class="chip" role="listitem"><span class="dot l2"></span>L2 Boundary-Enforcement Plane</span>
+    <span class="chip" role="listitem"><span class="dot l3"></span>L3 Typed Contracts &amp; Cohesion</span>
+    <span class="chip" role="listitem"><span class="dot l4"></span>L4 Execution Singularity</span>
+    <span class="chip" role="listitem"><span class="dot l5"></span>L5 Test &amp; Dead-Code Integrity</span>
+    <span class="chip" role="listitem"><span class="dot l6"></span>L6 Observability &amp; Governance</span>
+  </div>
+
+  <!-- ENTRY -->
+  <div class="flow-arrow" aria-hidden="true">
+    <div class="badge">HTTP request · authenticated · rate-limited · typed envelope</div>
+    <div class="line down"></div>
+    <div class="caret"></div>
+  </div>
+
+  <!-- L1 -->
+  <section class="layer l1">
+    <div class="layer-head">
+      <div class="layer-index">1</div>
+      <h2>Ingress &amp; Security Baseline</h2>
+      <span class="tag">Closes tier-1 production risks</span>
+    </div>
+    <p style="margin:0 0 12px;color:var(--ink-dim);font-size:13px;">
+      Every public route is in an auth registry. <code>pickle.loads</code> is removed from request handling. CORS, rate limits, secret-rotation, and PII-in-repo policy are CI-enforced — not promised in docs.
+    </p>
+    <div class="tiles">
+      <div class="tile enforcement">
+        <div class="t-title">Auth Registry</div>
+        <div class="t-desc"><code>app/security/auth.py</code> · every route declared with scheme + ownership check; 404 on absence.</div>
+        <span class="t-tag">enforcement</span>
+      </div>
+      <div class="tile enforcement">
+        <div class="t-title">JSON-Only Ingress</div>
+        <div class="t-desc"><code>messages.py</code> rejects non-JSON with 415. No <code>pickle.loads</code> fallback. <code>bandit</code> rule blocks reintroduction.</div>
+        <span class="t-tag">enforcement</span>
+      </div>
+      <div class="tile enforcement">
+        <div class="t-title">CORS &amp; Rate Limit</div>
+        <div class="t-desc"><code>flask-cors</code> per-route allow-list · <code>flask-limiter</code> keyed by API key + IP, per-role budgets.</div>
+        <span class="t-tag">enforcement</span>
+      </div>
+      <div class="tile governance">
+        <div class="t-title">Secret Hygiene</div>
+        <div class="t-desc"><code>gitleaks</code> in pre-commit + CI · quarterly rotation runbook · <code>.env*</code> blocked from commits.</div>
+        <span class="t-tag">governance</span>
+      </div>
+      <div class="tile governance">
+        <div class="t-title">PII-in-Repo Lint</div>
+        <div class="t-desc">Path allow-list: <code>tmpdata/**</code>, runtime caches, <code>.coverage</code> blocked. Synthetic data declared.</div>
+        <span class="t-tag">governance</span>
+      </div>
+      <div class="tile deterministic">
+        <div class="t-title">Identifier-Safe SQL</div>
+        <div class="t-desc"><code>psycopg2.sql.Identifier</code> for all schema/table interpolation · lint forbids non-literal f-string SQL.</div>
+        <span class="t-tag">deterministic</span>
+      </div>
+      <div class="tile deterministic">
+        <div class="t-title">Sandbox (Defense-in-Depth)</div>
+        <div class="t-desc"><code>tools/DataWrangler/utils/sandbox_executor.py</code> · regex + AST allow-list + timeout + I/O caps. Documented as DiD, not isolation.</div>
+        <span class="t-tag">deterministic</span>
+      </div>
+      <div class="tile governance">
+        <div class="t-title">Dependency Audit</div>
+        <div class="t-desc"><code>pip-audit</code> in CI · <code>cyclonedx-py</code> SBOM · Dependabot weekly · ADRs for major bumps.</div>
+        <span class="t-tag">governance</span>
+      </div>
+    </div>
+
+    <details>
+      <summary>What this layer kills (audit tier-1 findings)</summary>
+      <ul>
+        <li><code>app/routes/messages.py:289</code> — <code>pickle.loads(request.data)</code> on a public POST</li>
+        <li>No AuthN/AuthZ on any route (<code>sessions.py</code>, <code>queries.py</code>, <code>reactions.py</code>, <code>messages.py</code>)</li>
+        <li>No CORS, no rate limit anywhere in <code>webhook.py</code> or <code>app/</code></li>
+        <li><code>tmpdata/extended_context/2025-09-*/*.json</code> — production transcripts in repo</li>
+        <li><code>.coverage</code> 135 KB committed despite being in <code>.gitignore</code></li>
+      </ul>
+    </details>
+  </section>
+
+  <div class="flow-arrow"><div class="line"></div><div class="badge">Validated request crosses the boundary</div><div class="line down"></div><div class="caret"></div></div>
+
+  <!-- L2 -->
+  <section class="layer l2">
+    <div class="layer-head">
+      <div class="layer-index">2</div>
+      <h2>Boundary-Enforcement Plane</h2>
+      <span class="tag">Documented = enforced</span>
+    </div>
+    <p style="margin:0 0 12px;color:var(--ink-dim);font-size:13px;">
+      The architecture in <code>BACKEND_PYTHON_API_GUIDELINES.md</code> becomes binding through CI. <code>scripts/check_layer_deps.py</code> v2 lints every layer edge in both directions, including deferred imports. <code>core/</code> protocols break the actual cycles.
+    </p>
+
+    <div class="cp-grid">
+      <div class="cp-tile">
+        <h4>📜 layer_rules.yaml</h4>
+        <p>Single source of truth for allowed inter-layer edges. Docs are generated or linted from this file.</p>
+        <div class="spec">layers.tools.depends_on: [memory, config, core, logger, utils]</div>
+      </div>
+      <div class="cp-tile">
+        <h4>🔍 check_layer_deps v2</h4>
+        <p>AST-walks module-load + deferred imports + re-export laundering. Both directions, all layers.</p>
+        <div class="spec">CI hard gate · pre-commit · --baseline ratchet mode</div>
+      </div>
+      <div class="cp-tile">
+        <h4>🧬 SupportsObjectBus</h4>
+        <p>Protocol in <code>core/protocols.py</code>. <code>logic.bus</code> publishes; <code>agents</code>, <code>tools</code> consume.</p>
+        <div class="spec">put · get · get_objects_for_session</div>
+      </div>
+      <div class="cp-tile">
+        <h4>🧬 SupportsBuildChatModel</h4>
+        <p>Protocol breaks <code>tools → logic.llm</code> module-load cycle.</p>
+        <div class="spec">__call__(slot, role=None, max_tokens=None) → BaseChatModel</div>
+      </div>
+      <div class="cp-tile">
+        <h4>🧬 SupportsQueryEnhancer</h4>
+        <p>Protocol replaces direct <code>tools/QueryDatabase → logic.query</code> import.</p>
+        <div class="spec">enhance(query: str) → EnhancementResult</div>
+      </div>
+      <div class="cp-tile">
+        <h4>🧬 SupportsQueryContext</h4>
+        <p><code>logger/</code> becomes a leaf; <code>logic/</code> writes through the protocol.</p>
+        <div class="spec">get_query_id · set_query_id · clear_query_id</div>
+      </div>
+      <div class="cp-tile">
+        <h4>🚫 ImportError Allowlist</h4>
+        <p><code>try/except ImportError</code> permitted only for genuinely optional providers.</p>
+        <div class="spec">allowlist: langchain_together · langchain_openai · serpapi</div>
+      </div>
+      <div class="cp-tile">
+        <h4>🚷 No-Test-Branching Lint</h4>
+        <p>Forbids <code>'pytest' in sys.modules</code>, <code>PYTEST_CURRENT_TEST</code> checks in production code.</p>
+        <div class="spec">scope: app/ · agents/ · logic/ · tools/ · memory/</div>
+      </div>
+      <div class="cp-tile">
+        <h4>🛑 No-OS-Environ-Mutation</h4>
+        <p>Lint blocks module-level <code>os.environ = ...</code> outside <code>tests/_allowed_globals.py</code>.</p>
+        <div class="spec">conftest.py uses monkeypatch fixtures, not module-load mutation</div>
+      </div>
+      <div class="cp-tile">
+        <h4>📐 Size-Budget Lint</h4>
+        <p>File LOC, class methods, function-scope imports, broad-except counts. Ratchet only down.</p>
+        <div class="spec">governance/size_budgets.yaml · per-file exceptions with sunset</div>
+      </div>
+      <div class="cp-tile">
+        <h4>📚 docs_lint</h4>
+        <p>Every file path cited in <code>*.md</code> must exist. Tree diagrams generated from the file system.</p>
+        <div class="spec">scripts/render_tree.py · pre-commit · docs are build artifacts</div>
+      </div>
+      <div class="cp-tile">
+        <h4>🏛️ Governance YAMLs</h4>
+        <p>Every artifact has <code>owner</code>. Layer rules, exceptions, deprecations, size budgets, feature-flag specs.</p>
+        <div class="spec">governance/{layer_rules, layer_exceptions, deprecations, size_budgets}.yaml</div>
+      </div>
+    </div>
+
+    <details>
+      <summary>What this layer fixes (audit findings)</summary>
+      <ul>
+        <li>30+ <code>tools/* → logic/*</code> imports at module load</li>
+        <li><code>memory/llull_database.py:17-18 → logic.llm</code> (memory layer reaching upward)</li>
+        <li><code>logger/logger.py:150 → logic.plan.plan_context</code> (logger is supposed to be a leaf)</li>
+        <li><code>agents/chart/agent.py:27 → tools.utils.path_utils</code> (agent reaching into a tool's helpers)</li>
+        <li><code>scripts/check_layer_deps.py</code> currently enforces the only direction with zero violations</li>
+        <li>83 <code>try/except ImportError</code> swallows hide future typo'd imports</li>
+      </ul>
+    </details>
+  </section>
+
+  <div class="flow-arrow"><div class="line"></div><div class="badge">Architecture is binding</div><div class="line down"></div><div class="caret"></div></div>
+
+  <!-- L3 -->
+  <section class="layer l3">
+    <div class="layer-head">
+      <div class="layer-index">3</div>
+      <h2>Typed Contracts &amp; Cohesion</h2>
+      <span class="tag">No <code>Dict[str, Any]</code> at boundaries</span>
+    </div>
+    <div class="tiles">
+      <div class="tile registry">
+        <div class="t-title">Text2QueryToolMetadata</div>
+        <div class="t-desc">Pydantic model replaces <code>tool_metadata: Dict[str, Any]</code>. ValidationError at config-load with field path.</div>
+        <span class="t-tag">typed boundary</span>
+      </div>
+      <div class="tile registry">
+        <div class="t-title">FeatureFlags Model</div>
+        <div class="t-desc">Replaces flat <code>FEATURE_FLAGS: Dict[str, bool]</code>. Each flag carries owner, since, sunset, ADR.</div>
+        <span class="t-tag">typed boundary</span>
+      </div>
+      <div class="tile registry">
+        <div class="t-title">Structured RoutingDecision</div>
+        <div class="t-desc"><code>with_structured_output(RoutingDecision)</code> · no free-form JSON regex split in <code>_parse_routing_response</code>.</div>
+        <span class="t-tag">typed output</span>
+      </div>
+      <div class="tile registry">
+        <div class="t-title">RuntimeContext Injection</div>
+        <div class="t-desc">Typed context replaces zombie <code>ToolExecutor._inject_context</code>; explicit signature, not introspection.</div>
+        <span class="t-tag">typed contract</span>
+      </div>
+      <div class="tile enforcement">
+        <div class="t-title">Size Budgets · Files</div>
+        <div class="t-desc">Hard ceiling 600 LOC default. Per-file exceptions with sunset for the 8 god-classes.</div>
+        <span class="t-tag">enforcement</span>
+      </div>
+      <div class="tile enforcement">
+        <div class="t-title">Size Budgets · Classes</div>
+        <div class="t-desc">≤ 12 methods per class. <code>Orchestrator</code>, <code>QueryDatabase</code>, <code>Text2SQLAgent</code>, <code>LlullDB</code>, <code>VisualizationManager</code> decomposed.</div>
+        <span class="t-tag">enforcement</span>
+      </div>
+      <div class="tile enforcement">
+        <div class="t-title">Broad-Except Budget</div>
+        <div class="t-desc">≤ 5 broad <code>except Exception</code> per file · ratchet down from 443 today.</div>
+        <span class="t-tag">enforcement</span>
+      </div>
+      <div class="tile deterministic">
+        <div class="t-title">Function-Scope-Import Cap</div>
+        <div class="t-desc">≤ 8 per file. Caps the hidden-coupling pattern (<code>orchestrator.py</code> has 36 today).</div>
+        <span class="t-tag">deterministic</span>
+      </div>
+    </div>
+
+    <details>
+      <summary>God-class decomposition targets</summary>
+      <ul>
+        <li><code>Orchestrator</code> (1 052) → coordinator (≤ 250) · RoutingCache · AgentFactory · Stage0 · Pipeline</li>
+        <li><code>QueryDatabase</code> (2 257) → Tool (≤ 300) · Connection · EntitySetup · RulesSetup · Viz</li>
+        <li><code>VisualizationManager</code> (2 149) → coordinator · ChartFactory · SpecBuilder · Heuristics · EChartsAdapter · PlotlyAdapter</li>
+        <li><code>Text2SQLAgent</code> (1 353) → coordinator · SqlPromptBuilder · SqlPostProcessor</li>
+        <li><code>LlullDB</code> (909) → engine+pool (≤ 250) · SessionRepository · QueryRepository · FigureRepository</li>
+        <li><code>ConversationManager</code> (746) → coordinator · Compactor · Cache</li>
+      </ul>
+    </details>
+  </section>
+
+  <div class="flow-arrow"><div class="line"></div><div class="badge">Typed contracts cross every layer</div><div class="line down"></div><div class="caret"></div></div>
+
+  <!-- L4 -->
+  <section class="layer l4">
+    <div class="layer-head">
+      <div class="layer-index">4</div>
+      <h2>Execution-Path Singularity</h2>
+      <span class="tag">One way to do each thing</span>
+    </div>
+    <div class="tiles">
+      <div class="tile enforcement">
+        <div class="t-title">Single SQL Gateway</div>
+        <div class="t-desc"><code>logic/validation/sql_execution_gateway.gate(...)</code> is the only execution path. Legacy <code>QueryDatabase</code> path removed.</div>
+        <span class="t-tag">gateway</span>
+      </div>
+      <div class="tile deterministic">
+        <div class="t-title">Deterministic Rewriters</div>
+        <div class="t-desc">UNION-ORDER-LIMIT · EntityExactMatchGuard · DateBoundary · Additivity. Extracted from inline <code>Text2SQLAgent</code> code.</div>
+        <span class="t-tag">deterministic</span>
+      </div>
+      <div class="tile registry">
+        <div class="t-title">SqlPolicy</div>
+        <div class="t-desc"><code>logic/validation/sql_policy.py</code> · typed policy with R0 hard blocks + domain packs YAML-asserted at startup.</div>
+        <span class="t-tag">policy</span>
+      </div>
+      <div class="tile deterministic">
+        <div class="t-title">AnalyticalEnginePool</div>
+        <div class="t-desc"><code>memory/analytical_pool.py</code> · per-(role, remote_url) engine cache with <code>pool_pre_ping=True</code>. No per-request <code>create_engine</code>.</div>
+        <span class="t-tag">runtime</span>
+      </div>
+      <div class="tile enforcement">
+        <div class="t-title">Tool Base Singularity</div>
+        <div class="t-desc">One <code>ToolBase</code> · <code>from tools.tool_base import ToolBase as BaseTool</code> alias removed everywhere.</div>
+        <span class="t-tag">enforcement</span>
+      </div>
+      <div class="tile registry">
+        <div class="t-title">Single Config Cache Strategy</div>
+        <div class="t-desc">Reconcile overlapping <code>config_cache_manager.py</code> + <code>dynamic_config_manager.py</code> into a single owned module.</div>
+        <span class="t-tag">consolidation</span>
+      </div>
+      <div class="tile enforcement">
+        <div class="t-title">Model Factory Sole Source</div>
+        <div class="t-desc"><code>build_chat_model</code> is the only LLM construction path. No hardcoded model IDs in agents/tools.</div>
+        <span class="t-tag">consolidation</span>
+      </div>
+      <div class="tile deterministic">
+        <div class="t-title">Single Python Source</div>
+        <div class="t-desc"><code>pyproject.toml</code> is canonical · <code>Dockerfile</code> &amp; <code>.python-version</code> derived · CI matrix asserts both.</div>
+        <span class="t-tag">deterministic</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="flow-arrow"><div class="line"></div><div class="badge">One execution path · pooled · gated · typed</div><div class="line down"></div><div class="caret"></div></div>
+
+  <!-- L5 -->
+  <section class="layer l5">
+    <div class="layer-head">
+      <div class="layer-index">5</div>
+      <h2>Test &amp; Dead-Code Integrity</h2>
+      <span class="tag">Tests measure what ships</span>
+    </div>
+    <div class="tiles">
+      <div class="tile enforcement">
+        <div class="t-title">Honest Coverage Gate</div>
+        <div class="t-desc"><code>.coveragerc</code> omits only vendored / generated / bootstrap. Production files measured. Gate ratchets up only.</div>
+        <span class="t-tag">enforcement</span>
+      </div>
+      <div class="tile enforcement">
+        <div class="t-title">coveragerc_lint</div>
+        <div class="t-desc">CI lint asserts every <code>omit:</code> path exists and is on a vendored/generated allow-list.</div>
+        <span class="t-tag">enforcement</span>
+      </div>
+      <div class="tile enforcement">
+        <div class="t-title">Mock-Path Lint</div>
+        <div class="t-desc">AST-walks tests for <code>patch.dict(sys.modules, …)</code>, <code>patch(...)</code>, <code>monkeypatch.setattr</code>. Path must resolve.</div>
+        <span class="t-tag">enforcement</span>
+      </div>
+      <div class="tile enforcement">
+        <div class="t-title">Integration Smoke</div>
+        <div class="t-desc">Postgres service container in CI · <code>tests/integration/test_user_query_smoke.py</code> · imports app in fresh interpreter.</div>
+        <span class="t-tag">enforcement</span>
+      </div>
+      <div class="tile deterministic">
+        <div class="t-title">conftest Hygiene</div>
+        <div class="t-desc">No module-load <code>SafeEnviron</code>. No global <code>OpenAIEmbeddings</code> mutation. Fixtures only.</div>
+        <span class="t-tag">deterministic</span>
+      </div>
+      <div class="tile governance">
+        <div class="t-title">@deprecated Registry</div>
+        <div class="t-desc"><code>core/deprecation.py</code> + <code>governance/deprecations.yaml</code> · <code>check_sunsets.py</code> fails build past sunset.</div>
+        <span class="t-tag">governance</span>
+      </div>
+      <div class="tile governance">
+        <div class="t-title">vulture in CI</div>
+        <div class="t-desc">Dead-code detection on every PR · quarterly review checklist · already in <code>requirements.txt</code>.</div>
+        <span class="t-tag">governance</span>
+      </div>
+      <div class="tile enforcement">
+        <div class="t-title">Zombie Excision</div>
+        <div class="t-desc">Delete <code>plan_executor.py</code> (1 851), <code>plan_builder.py</code> (1 388), and ~3 500 LOC of mocked tests. Relocate <code>plan_context.py</code> first.</div>
+        <span class="t-tag">enforcement</span>
+      </div>
+    </div>
+
+    <details>
+      <summary>The 7 000-LOC excision plan (one PR, one ADR)</summary>
+      <ul>
+        <li>1. Move <code>logic/plan/plan_context.py</code> to a leaf (<code>logger/query_context.py</code> or <code>core/query_context.py</code>)</li>
+        <li>2. Update three importers: <code>logger/logger.py:150</code>, <code>logger/opensearch_handler.py:16</code>, <code>app/routes/messages.py:31</code></li>
+        <li>3. Delete <code>logic/plan/plan_executor.py</code>, <code>logic/plan/__init__.py</code> exports, <code>logic/planner/plan_builder.py</code>, possibly <code>logic/planner/answer_validator.py</code></li>
+        <li>4. Delete <code>test_plan_executor*.py</code> · <code>test_plan_builder*.py</code></li>
+        <li>5. Re-run boundary-lint v2 → expect a meaningful reduction in <code>logic ↔ tools</code> cycles</li>
+        <li>6. Re-baseline coverage</li>
+      </ul>
+    </details>
+  </section>
+
+  <div class="flow-arrow"><div class="line"></div><div class="badge">Honest signal · ratcheting upward</div><div class="line down"></div><div class="caret"></div></div>
+
+  <!-- L6 -->
+  <section class="layer l6">
+    <div class="layer-head">
+      <div class="layer-index">6</div>
+      <h2>Observability &amp; Governance Backplane</h2>
+      <span class="tag">Cross-cutting</span>
+    </div>
+    <div class="cross">
+      <div class="tile governance">
+        <div class="t-title">Stage Counters</div>
+        <div class="t-desc">Per-stage execution counters in the orchestrator. Daily report flags any stage with zero executions over 24 h.</div>
+        <span class="t-tag">dark-stage detection</span>
+      </div>
+      <div class="tile governance">
+        <div class="t-title">Build-Time Metrics</div>
+        <div class="t-desc">LOC histogram, broad-except delta, function-scope-import delta, coverage delta — emitted on every PR.</div>
+        <span class="t-tag">observability</span>
+      </div>
+      <div class="tile governance">
+        <div class="t-title">OpenTelemetry Spans</div>
+        <div class="t-desc">Route entry · orchestrator stages · agent execution · tool calls · LLM calls · SQL execution · ObjectBus put/get.</div>
+        <span class="t-tag">observability</span>
+      </div>
+      <div class="tile governance">
+        <div class="t-title">Logger Singularity</div>
+        <div class="t-desc"><code>LlullLogger.emit_plan_event</code> moves out of dead <code>plan_executor</code> namespace. <code>OpenSearchLogHandler</code> as exporter.</div>
+        <span class="t-tag">consolidation</span>
+      </div>
+      <div class="tile governance">
+        <div class="t-title">ADRs</div>
+        <div class="t-desc"><code>docs/adr/</code> · pickle-RCE removal · ImportError swallow policy · model registry · A2A migration · DateFilter observe-only · zombie excision · tool-metadata typing · analytical pooling · mock-path lint.</div>
+        <span class="t-tag">governance</span>
+      </div>
+      <div class="tile governance">
+        <div class="t-title">CODEOWNERS &amp; Pre-commit</div>
+        <div class="t-desc"><code>.github/CODEOWNERS</code> · PR template · <code>black · autoflake · ruff · check_layer_deps · docs_lint · test_mock_path_lint · gitleaks</code>.</div>
+        <span class="t-tag">governance</span>
+      </div>
+      <div class="tile governance">
+        <div class="t-title">Quarterly Dead-Code Review</div>
+        <div class="t-desc">30-min checklist · run <code>vulture --min-confidence 70</code> · review past-sunset symbols · delete or extend with ADR.</div>
+        <span class="t-tag">governance</span>
+      </div>
+      <div class="tile governance">
+        <div class="t-title">Audit Log</div>
+        <div class="t-desc">Approvals, deprecations, layer-exception additions, size-budget changes, coverage-gate moves.</div>
+        <span class="t-tag">compliance</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- KPIs / SUMMARY -->
+  <section class="summary-grid" aria-label="Acceptance summary">
+    <div class="summary-card good">
+      <div class="kpi">0 / RCE</div>
+      <h3>No deserialization on public surface</h3>
+      <p><code>pickle.loads</code> removed; every route in the auth registry; CORS &amp; rate limit configured; <code>bandit</code> blocks reintroduction.</p>
+    </div>
+    <div class="summary-card">
+      <div class="kpi">2-way</div>
+      <h3>Boundary lint</h3>
+      <p><code>scripts/check_layer_deps.py</code> v2 enforces every layer edge in both directions, including deferred imports — failing CI on violation.</p>
+    </div>
+    <div class="summary-card">
+      <div class="kpi">0 omits</div>
+      <h3>Honest coverage</h3>
+      <p>No production file is omitted from measurement via configuration. Opt-out is <code># pragma: no cover</code> in code, where reviewers see it.</p>
+    </div>
+    <div class="summary-card warn">
+      <div class="kpi">−7 000</div>
+      <h3>LOC of zombie code excised</h3>
+      <p><code>plan_executor.py</code> + <code>plan_builder.py</code> + their mocked-only tests deleted. <code>plan_context.py</code> relocated to a leaf.</p>
+    </div>
+    <div class="summary-card">
+      <div class="kpi">0 mocks</div>
+      <h3>at non-existent module paths</h3>
+      <p><code>scripts/test_mock_path_lint.py</code> AST-walks tests; the typo'd-import-path class of dark code is structurally prevented.</p>
+    </div>
+    <div class="summary-card good">
+      <div class="kpi">100 %</div>
+      <h3>Typed boundaries</h3>
+      <p>Tool metadata, feature flags, routing output, runtime context — all Pydantic-typed. <code>Dict[str, Any]</code> is not a contract.</p>
+    </div>
+  </section>
+
+  <footer>
+    Target Architecture · Codebase Governance &amp; Dark-Code Resistance — <code>LlullGen</code> · ships discipline as build artifact, not as prose.
+  </footer>
+</div>
+</body>
+</html>
